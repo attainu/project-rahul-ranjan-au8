@@ -1,12 +1,16 @@
 import sys
-from requests import Session
-from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 import json
 import argparse
+import time
+from datetime import datetime
+from requests import Session
+from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 
 class CRYPTO:
     def __init__(self, cryptocurrency, currency):
+        self.cryptocurrency = cryptocurrency
+        self.currency = currency
         # coinmarketcap id for top cryptocurrencies
         self.top_crypto_id = {
             'bitcoin': '1',
@@ -32,34 +36,58 @@ class CRYPTO:
         try:
             response = session.get(self.crypto_url, params=self.parameters)
             data = json.loads(response.text)
-            # return "{:.2f}".format(data['data']['1']['quote']['INR']['price'])
+            price = "{:.2f}".format(
+                data['data'][self.parameters['id']]['quote'][self.currency]['price'])
             print(data['data'][self.parameters['id']]
-                  ['name'], currency, end=" ")
-            print("{:.2f}".format(
-                data['data'][self.parameters['id']]['quote'][currency]['price']))
-            # print(data)
+                  ['name'], self.currency, price)
+
+            return float(price)
 
         except (ConnectionError, Timeout, TooManyRedirects) as e:
-            print(f"\n!! ERROR !!\n\n{e}\n\n!! ERROR !!\n\nPlease Try Later")
+            print(
+                f"\nNot able to fetch price of '{self.cryptocurrency}' at this moment!\nPlease try later!")
+            print(f"\n!! ERROR !!\n{e}\n")
+
+    def format_crypto_history(self, crypto_history):
+        rows = []
+        for crypto_price in crypto_history:
+            date = crypto_price['date'].strftime('%d.%m.%Y %H:%M')
+            price = crypto_price['price']
+            row = '{}: {} <b>{}</b>'.format(date, self.currency, price)
+            rows.append(row)
+        return '<br>'.join(rows)
 
 
 class IFTTT:
-    def __init__(self):
-        self.ifttt_url = 'https://maker.ifttt.com/trigger/bitcoin_price_changed/with/key/bNx9O6cKq_CpRFdguicR67vdBo2geCTGEYsRgbt3mWK'
+    def __init__(self, cryptocurrency, currency):
+        self.ifttt_url = 'https://maker.ifttt.com/trigger/{}/with/key/bNx9O6cKq_CpRFdguicR67vdBo2geCTGEYsRgbt3mWK'
+        self.cryptocurrency = cryptocurrency
+        self.currency = currency
 
-    def trigger_event(self, price):
+    def trigger_event(self, event, message):
         session = Session()
-        session.post(self.ifttt_url, json={"value1": price})
+        ifttt_event_url = self.ifttt_url.format(event)
+        data = {'value1': self.cryptocurrency.upper(),
+                'value2': self.currency, 'value3': message}
+
+        try:
+            session.post(ifttt_event_url, json=data)
+
+        except (ConnectionError, Timeout, TooManyRedirects) as e:
+            print("-" * 150)
+            print(
+                f"\nNot able to send notification at this moment!\nPlease try later!")
+            print(f"\n!! ERROR !!\n{e}\n")
 
 
-def parse_user_input():
+def parse_user_args():
     parser = argparse.ArgumentParser(
         description='CRYPTOCURRENCY PRICE NOTIFIER: Default Arguments: bitcoin, INR, 1200000, 60')
 
     parser.add_argument('--c', default='bitcoin',
                         type=str, help="Cryptocurrency Type: ['bitcoin', 'etherium', 'tether', 'xrp', 'litecoin']")
     parser.add_argument('--f', default='INR', type=str,
-                        help="Fiat Currency ['INR', 'USD']")
+                        help="Fiat Currency ['INR', 'USD', 'CNY', 'EUR', 'JPY']")
     parser.add_argument('--p', default=1200000,
                         type=int, help='Threshold Price for emergency notification')
     parser.add_argument('--t', default=60,
@@ -77,21 +105,40 @@ def parse_user_input():
         print(f"\nSorry!\n'{cryptocurrency}' is not supported yet!")
         print("\nPlease enter one of these cryptocurrencies:", top_crypto)
         sys.exit()
-
-    if currency.upper() not in ['INR', 'USD']:
+    if currency.upper() not in ['INR', 'USD', 'CNY', 'EUR', 'JPY']:
         print(f"\nSorry!\n'{currency}' is not supported yet!")
-        print("\nPlease enter one of these cryptocurrencies: ['INR', 'USD']")
+        print(
+            "\nPlease enter one of these cryptocurrencies: ['INR', 'USD', 'CNY', 'EUR', 'JPY']")
+        sys.exit()
+    if threshold_price < 1:
+        print(f"\nPlease enter threshold_price greater than 1.")
+        sys.exit()
+    if time_interval < 1:
+        print(f"\nPlease enter time_interval greater than 1.")
         sys.exit()
 
     return cryptocurrency.lower(), currency.upper(), threshold_price, time_interval
 
 
 if __name__ == '__main__':
-    cryptocurrency, currency, threshold_price, time_interval = parse_user_input()
+    cryptocurrency, currency, threshold_price, time_interval = parse_user_args()
+    print("\nCRYPTO PRICE NOTIFIER v-0.1\n")
 
     bitcoin = CRYPTO(cryptocurrency, currency)
-    bitcoin.fetch_price()
-    # current_price = bitcoin.fetch_price()
+    ifttt_user = IFTTT(cryptocurrency, currency)
 
-    # ifttt_user = IFTTT()
-    # ifttt_user.trigger_event(current_price)
+    crypto_history = []
+    while True:
+        price = bitcoin.fetch_price()
+        date = datetime.now()
+        crypto_history.append({'date': date, 'price': price})
+
+        if price < threshold_price:
+            ifttt_user.trigger_event('crypto_price_emergency', price)
+
+        if len(crypto_history) == 5:
+            ifttt_user.trigger_event('crypto_price_update',
+                                     bitcoin.format_crypto_history(crypto_history))
+            crypto_history = []
+
+        time.sleep(time_interval)
