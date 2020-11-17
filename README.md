@@ -18,6 +18,7 @@ Project is created with:
 
 - Python: 3.8.5
 - requests: 2.24.0 (Python external library for making get/post requests)
+- pytz: 2020.4 (Python external library for timezone)
 - flake8: 3.8.4 (Python external library for linting)
 - CoinMarketCap API
 - IFTTT
@@ -33,9 +34,13 @@ To run this project:
 
    `$ pip install requests`
 
-4. Create account on [CoinMarketCap](https://pro.coinmarketcap.com/signup) and get API Key.
-5. Create account on Telegram and create a public channel and add @IFTTT to that channel as an admin.
-6. Create account on [IFTTT](https://ifttt.com/) and create 2 applets as:
+4. Install pytz library:
+
+   `$ pip install pytz`
+
+5. Create account on [CoinMarketCap](https://pro.coinmarketcap.com/signup) and get API Key.
+6. Create account on Telegram and create a public channel and add @IFTTT to that channel as an admin.
+7. Create account on [IFTTT](https://ifttt.com/) and create 2 applets as:
    `if this(webhook), then that(Telegram message)`
 
    - Applet-1:
@@ -54,7 +59,7 @@ To run this project:
 
      Message text = `Emergency!<br>{{Value1}} price is at {{Value2}} {{Value3}}.<br>Buy or sell now!`
 
-7. In `main.py` file replace CoinMarketCap API key and IFTTT maker API key with your keys.
+8. In `main.py` file replace CoinMarketCap API key and IFTTT maker API key with your keys.
 
    - ```
      self.headers = {
@@ -65,7 +70,7 @@ To run this project:
 
    - `https://maker.ifttt.com/trigger/{}/with/key/{your-IFTTT-key}`
 
-8. Install flake8 library:
+9. Install flake8 library:
 
    - `$ pip install flake8`
 
@@ -74,12 +79,12 @@ To run this project:
 
    - `$ python -m flake8`
 
-9. run `main.py`
-   - `$ python main.py`
-   - by default it will run with 4 default arguments:
-     `-c bitcoin -f INR -p 1200000 -t 300`
-   - these all are optional arguments, if you want to give arguments then it will take that otherwise it will defaults to the above arguments.
-10. After every 300 sec (5 min), latest price will be fetched and compared with the threshold price and you will get emergency notification on your Telegram channel if the latest price is below the threshold price. Also, you will get 5 latest price updates after every 25 minutes.
+10. run `main.py`
+    - `$ python main.py`
+    - by default it will run with 4 default arguments:
+      `-c bitcoin -f INR -p 1200000 -t 300`
+    - these all are optional arguments, if you want to give arguments then it will take that otherwise it will defaults to the above arguments.
+11. After every 300 sec (5 min), latest price will be fetched and compared with the threshold price and you will get emergency notification on your Telegram channel if the latest price is below the threshold price. Also, you will get 5 latest price updates after every 25 minutes.
 
 ## Usage
 

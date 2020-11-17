@@ -3,6 +3,7 @@ import json
 import argparse
 import time
 from datetime import datetime
+from pytz import timezone
 from requests import Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
@@ -54,7 +55,7 @@ class CRYPTO:
     def format_price_history(self, price_history):
         rows = []
         for crypto_price in price_history:
-            date = crypto_price['date'].strftime('%d.%m.%Y %H:%M')
+            date = crypto_price['date']
             price = crypto_price['price']
             row = '{}: {} <b>{}</b>'.format(date, self.currency, price)
             rows.append(row)
@@ -138,7 +139,8 @@ if __name__ == '__main__':
     price_history = []
     while True:
         price = coin.fetch_price()
-        date = datetime.now()
+        date = datetime.now(timezone('Asia/Calcutta')
+                            ).strftime('%Z %d-%m-%Y %H:%M')
         price_history.append({'date': date, 'price': price})
 
         if price < threshold_price:
